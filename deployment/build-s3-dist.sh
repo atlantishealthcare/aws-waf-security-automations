@@ -98,6 +98,7 @@ echo "--------------------------------------------------------------------------
 echo "[Packing] Log Parser"
 echo "------------------------------------------------------------------------------"
 cd "$source_dir"/log_parser || exit 1
+"$POETRY_COMMAND" --version
 "$POETRY_COMMAND" export --without dev -f requirements.txt --output requirements.txt --without-hashes
 pip3 install -r requirements.txt --target ./package
 cd "$source_dir"/log_parser/package || exit 1
