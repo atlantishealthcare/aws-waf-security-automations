@@ -10,7 +10,7 @@
 #  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    #
 #  and limitations under the License.                                                                                #
 ######################################################################################################################
-
+import html
 import json
 import botocore
 import os
@@ -24,6 +24,9 @@ AWS_LOGS_PATH_PREFIX = 'AWSLogs/'
 S3_OBJECT_CREATED = 's3:ObjectCreated:*'
 EMPTY_BUCKET_NAME_EXCEPTION = Exception('Failed to configure access log bucket. Name cannot be empty!')
 
+
+def sanitize_string(s):
+    return html.escape(str(s))
 
 class ResourceManager:
     def __init__(self, log: Logger):
@@ -285,6 +288,26 @@ class ResourceManager:
         # Enable access logging
         self.put_s3_bucket_access_logging(bucket_name, access_logging_bucket_name)
 
+        self.s3.put_bucket_policy(
+            bucket_name=bucket_name,
+            bucket_policy=json.dumps({
+                "Statement":[
+                    {
+                        "Action": "s3:*",
+                        "Effect": "Deny",
+                        "Principal": "*",
+                        "Resource": [
+                            f"arn:aws:s3:::{bucket_name}/*",
+                            f"arn:aws:s3:::{bucket_name}"
+                        ],
+                        "Condition":{
+                            "Bool": { "aws:SecureTransport": False }
+                        }
+                    }
+                ]
+            })
+        )
+
     def get_params_bucket_lambda_delete_event(self, event: dict) -> dict:
         params = {}
         resource_props = event.get('ResourceProperties', {})
@@ -418,7 +441,7 @@ class ResourceManager:
 
         self.log.debug("[generate_app_log_parser_conf_file] Start")
 
-        local_file = '/tmp/' + stack_name + '-app_log_conf_LOCAL.json'
+        local_file = '/tmp/' + stack_name + '-app_log_conf_LOCAL.json' #NOSONAR tmp use for an insensitive workspace
         remote_file = stack_name + '-app_log_conf.json'
         default_conf = {
             'general': {
@@ -542,7 +565,7 @@ class ResourceManager:
         block_period = int(resource_props['WAFBlockPeriod'])
         waf_access_log_bucket = resource_props['WafAccessLogBucket']
 
-        local_file = '/tmp/' + stack_name + '-waf_log_conf_LOCAL.json'
+        local_file = '/tmp/' + stack_name + '-waf_log_conf_LOCAL.json' #NOSONAR tmp use for an insensitive workspace
         remote_file = stack_name + '-waf_log_conf.json'
         default_conf = {
             'general': {
@@ -592,19 +615,34 @@ class ResourceManager:
                 resource_props['AthenaWorkGroup']
                 )
         )
-        self.log.info("[add_athena_partitions] Lambda invocation response:\n%s" % response)
+
+        # Extract relevant information from the response
+        status_code = response.get('StatusCode')
+        payload = json.loads(response.get('Payload').read().decode('utf-8'))
+
+        # Sanitize the extracted information
+        sanitized_status = sanitize_string(status_code)
+        if payload and payload.items():
+            sanitized_payload = json.dumps({k: sanitize_string(v) for k, v in payload.items()})
+        else:
+            sanitized_payload = None
+
+        # Log the sanitized information
+        self.log.info(
+            f"[add_athena_partitions] Lambda invocation response:\nStatus Code: {sanitized_status}\nPayload: {sanitized_payload}")
+
         self.log.info("[add_athena_partitions] End")
     
     
     # ======================================================================================================================
     # Auxiliary Functions
     # ======================================================================================================================
-    def send_anonymous_usage_data(self, action_type, resource_properties):
+    def send_anonymized_usage_data(self, action_type, resource_properties):
         try:
-            if 'SendAnonymousUsageData' not in resource_properties or resource_properties[
-                'SendAnonymousUsageData'].lower() != 'yes':
+            if 'SendAnonymizedUsageData' not in resource_properties or resource_properties[
+                'SendAnonymizedUsageData'].lower() != 'yes':
                 return
-            self.log.info("[send_anonymous_usage_data] Start")
+            self.log.info("[send_anonymized_usage_data] Start")
 
             usage_data = {
                         "version": resource_properties['Version'],
@@ -650,13 +688,13 @@ class ResourceManager:
             }
 
             # --------------------------------------------------------------------------------------------------------------
-            self.log.info("[send_anonymous_usage_data] Send Data")
+            self.log.info("[send_anonymized_usage_data] Send Data")
             # --------------------------------------------------------------------------------------------------------------
             response = send_metrics(data=usage_data)
             response_code = response.status_code
-            self.log.info('[send_anonymous_usage_data] Response Code: {}'.format(response_code))
-            self.log.info("[send_anonymous_usage_data] End")
+            self.log.info('[send_anonymized_usage_data] Response Code: {}'.format(response_code))
+            self.log.info("[send_anonymized_usage_data] End")
 
         except Exception as error:
-            self.log.debug("[send_anonymous_usage_data] Failed to Send Data")
+            self.log.debug("[send_anonymized_usage_data] Failed to Send Data")
             self.log.debug(str(error))

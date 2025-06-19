@@ -3,13 +3,12 @@
 
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  (SO0006) - Security Automations for AWS WAF %VERSION%: This AWS CloudFormation template helps
+  (SO0006) - Security Automations for AWS WAF: This AWS CloudFormation template helps
   you provision the Security Automations for AWS WAF stack without worrying about creating and
   configuring the underlying AWS infrastructure.
-
   **WARNING** This template creates multiple AWS Lambda functions, an AWS WAFv2 Web ACL, an Amazon S3 bucket,
   and an Amazon CloudWatch custom metric. You will be billed for the AWS resources used if you
-  create a stack from this template.
+  create a stack from this template. %VERSION%
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -695,7 +694,7 @@ Mappings:
             KeyPrefix: '%SOLUTION_NAME%/%VERSION%'
     Solution:
         Data:
-            SendAnonymousUsageData: 'Yes'
+            SendAnonymizedUsageData: 'Yes'
             LogLevel: 'INFO'
             SolutionID: 'SO0006'
             MetricsURL: 'https://metrics.awssolutionsbuilder.com/generic'
@@ -1168,6 +1167,7 @@ Resources:
                   - 's3:GetBucketLocation'
                   - 's3:GetObject'
                   - 's3:ListBucket'
+                  - 's3:PutBucketPolicy'
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:s3:::${AppAccessLogBucket}'
         - !If
@@ -1472,7 +1472,7 @@ Resources:
           LOG_LEVEL: !FindInMap ["Solution", "Data", "LogLevel"]
           SCOPE: !If [AlbEndpoint, 'REGIONAL', 'CLOUDFRONT']
           USER_AGENT_EXTRA: !FindInMap [Solution, UserAgent, UserAgentExtra]
-      Runtime: python3.10
+      Runtime: python3.12
       MemorySize: 128
       Timeout: 300
     Metadata:
@@ -1677,6 +1677,25 @@ Resources:
                     id: W51
                     reason: "WafLogBucket does not require a bucket policy."
 
+  WafLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Condition: HttpFloodProtectionLogParserActivated
+    Properties:
+      Bucket:
+        Ref: WafLogBucket
+      PolicyDocument:
+        Statement:
+        - Action: "s3:*"
+          Condition:
+            Bool:
+              aws:SecureTransport: 'false'
+          Effect: Deny
+          Principal: "*"
+          Resource:
+            - !GetAtt WafLogBucket.Arn
+            - !Join ["/", [!GetAtt WafLogBucket.Arn, "*"]]
+          Sid: HttpsOnly
+
   AccessLoggingBucket:
     Type: AWS::S3::Bucket
     Condition: CreateS3LoggingBucket
@@ -1751,7 +1770,7 @@ Resources:
         Variables:
           APP_ACCESS_LOG_BUCKET: !If [ScannersProbesProtectionActivated, !Ref AppAccessLogBucket, !Ref 'AWS::NoValue']
           WAF_ACCESS_LOG_BUCKET: !If [HttpFloodProtectionLogParserActivated, !Ref WafLogBucket, !Ref 'AWS::NoValue']
-          SEND_ANONYMOUS_USAGE_DATA: !FindInMap ["Solution", "Data", "SendAnonymousUsageData"]
+          SEND_ANONYMIZED_USAGE_DATA: !FindInMap ["Solution", "Data", "SendAnonymizedUsageData"]
           UUID: !GetAtt CreateUniqueID.UUID
           LIMIT_IP_ADDRESS_RANGES_PER_IP_MATCH_CONDITION: '10000'
           MAX_AGE_TO_UPDATE: '30'
@@ -1778,7 +1797,8 @@ Resources:
           SOLUTION_ID: !FindInMap [Solution, Data, SolutionID]
           METRICS_URL: !FindInMap [Solution, Data, MetricsURL]
           USER_AGENT_EXTRA: !FindInMap [Solution, UserAgent, UserAgentExtra]
-      Runtime: python3.10
+          Version: "%VERSION%"
+      Runtime: python3.12
       MemorySize: 512
       Timeout: 300
     Metadata:
@@ -1810,7 +1830,7 @@ Resources:
           KEEP_ORIGINAL_DATA: !Ref KeepDataInOriginalS3Location
           ENDPOINT: !Ref EndpointType
           USER_AGENT_EXTRA: !FindInMap [Solution, UserAgent, UserAgentExtra]
-      Runtime: python3.10
+      Runtime: python3.12
       MemorySize: 512
       Timeout: 300
     Metadata:
@@ -1839,7 +1859,7 @@ Resources:
         Variables:
           LOG_LEVEL: !FindInMap ["Solution", "Data", "LogLevel"]
           USER_AGENT_EXTRA: !FindInMap [Solution, UserAgent, UserAgentExtra]
-      Runtime: python3.10
+      Runtime: python3.12
       MemorySize: 512
       Timeout: 300
     Metadata:
@@ -1872,7 +1892,7 @@ Resources:
           IP_RETENTION_PERIOD_DENIED_MINUTE: !Ref IPRetentionPeriodDeniedParam
           REMOVE_EXPIRED_IP_LAMBDA_ROLE_NAME: !Ref LambdaRoleRemoveExpiredIP
           USER_AGENT_EXTRA: !FindInMap [Solution, UserAgent, UserAgentExtra]
-      Runtime: python3.10
+      Runtime: python3.12
       MemorySize: 128
       Timeout: 300
     Metadata:
@@ -1899,12 +1919,13 @@ Resources:
           LOG_LEVEL: !FindInMap ["Solution", "Data", "LogLevel"]
           SNS_EMAIL: !If [SNSEmail, 'yes', 'no']
           SNS_TOPIC_ARN : !If [SNSEmail, !Ref IPExpirationSNSTopic, '']
-          SEND_ANONYMOUS_USAGE_DATA: !FindInMap ["Solution", "Data", "SendAnonymousUsageData"]
+          SEND_ANONYMIZED_USAGE_DATA: !FindInMap ["Solution", "Data", "SendAnonymizedUsageData"]
           UUID: !GetAtt CreateUniqueID.UUID
           SOLUTION_ID: !FindInMap [Solution, Data, SolutionID]
           METRICS_URL: !FindInMap [Solution, Data, MetricsURL]
           USER_AGENT_EXTRA: !FindInMap [Solution, UserAgent, UserAgentExtra]
-      Runtime: python3.10
+          Version: "%VERSION%"
+      Runtime: python3.12
       MemorySize: 512
       Timeout: 300
     Metadata:
@@ -2086,7 +2107,7 @@ Resources:
       Code:
         S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "SourceBucket"], !Ref 'AWS::Region']]
         S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "KeyPrefix"], 'reputation_lists_parser.zip']]
-      Runtime: python3.10
+      Runtime: python3.12
       MemorySize: 512
       Timeout: 300
       Environment:
@@ -2102,9 +2123,11 @@ Resources:
           METRICS_URL: !FindInMap [Solution, Data, MetricsURL]
           STACK_NAME: !Ref 'AWS::StackName'
           LOG_TYPE: !If [AlbEndpoint, 'alb', 'cloudfront']
-          SEND_ANONYMOUS_USAGE_DATA: !FindInMap ["Solution", "Data", "SendAnonymousUsageData"]
+          SEND_ANONYMIZED_USAGE_DATA: !FindInMap ["Solution", "Data", "SendAnonymizedUsageData"]
           IPREPUTATIONLIST_METRICNAME: !GetAtt WebACLStack.Outputs.IPReputationListsMetricName
           USER_AGENT_EXTRA: !FindInMap [Solution, UserAgent, UserAgentExtra]
+          UUID: !GetAtt CreateUniqueID.UUID
+          Version: "%VERSION%"
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -2181,7 +2204,7 @@ Resources:
           IP_SET_ID_BAD_BOTV6: !GetAtt WebACLStack.Outputs.WAFBadBotSetV6Arn
           IP_SET_NAME_BAD_BOTV4: !GetAtt WebACLStack.Outputs.NameBadBotSetV4
           IP_SET_NAME_BAD_BOTV6: !GetAtt WebACLStack.Outputs.NameBadBotSetV6
-          SEND_ANONYMOUS_USAGE_DATA: !FindInMap ["Solution", "Data", "SendAnonymousUsageData"]
+          SEND_ANONYMIZED_USAGE_DATA: !FindInMap ["Solution", "Data", "SendAnonymizedUsageData"]
           UUID: !GetAtt CreateUniqueID.UUID
           REGION: !Ref 'AWS::Region'
           LOG_TYPE: !If [AlbEndpoint, 'alb', 'cloudfront']
@@ -2191,7 +2214,8 @@ Resources:
           METRICS_URL: !FindInMap [Solution, Data, MetricsURL]
           STACK_NAME: !Ref 'AWS::StackName'
           USER_AGENT_EXTRA: !FindInMap [Solution, UserAgent, UserAgentExtra]
-      Runtime: python3.10
+          Version: "%VERSION%"
+      Runtime: python3.12
       MemorySize: 128
       Timeout: 300
     Metadata:
@@ -2383,7 +2407,9 @@ Resources:
           SOLUTION_ID: !FindInMap [Solution, Data, SolutionID]
           METRICS_URL: !FindInMap [Solution, Data, MetricsURL]
           USER_AGENT_EXTRA: !FindInMap [Solution, UserAgent, UserAgentExtra]
-      Runtime: python3.10
+          Version: "%VERSION%"
+          UUID: !GetAtt CreateUniqueID.UUID
+      Runtime: python3.12
       MemorySize: 128
       Timeout: 300
     Metadata:
@@ -2518,7 +2544,7 @@ Resources:
       ErrorThreshold: !Ref ErrorThreshold
       WAFBlockPeriod: !Ref WAFBlockPeriod
       Version: "%VERSION%"
-      SendAnonymousUsageData: !FindInMap ["Solution", "Data", "SendAnonymousUsageData"]
+      SendAnonymizedUsageData: !FindInMap ["Solution", "Data", "SendAnonymizedUsageData"]
 
   CustomAddAthenaPartitions:
     Type: 'Custom::AddAthenaPartitions'
@@ -2554,15 +2580,15 @@ Resources:
                     "stat": "Sum",
                     "period": 300,
                     "metrics": [
-                      ["WAF", "BlockedRequests", "WebACL", "${WAFWebACLMetricName}", "Rule", "ALL" ${RegionMetric}],
-                      ["WAF", "AllowedRequests", "WebACL", "${WAFWebACLMetricName}", "Rule", "ALL" ${RegionMetric}]
+                      ["AWS/WAFV2", "BlockedRequests", "WebACL", "${WAFWebACLName}", "Rule", "ALL" ${RegionMetric}],
+                      ["AWS/WAFV2", "AllowedRequests", "WebACL", "${WAFWebACLName}", "Rule", "ALL" ${RegionMetric}]
                     ],
                     "region": "${RegionProperties}"
                   }
                 }]
               }
             -
-              WAFWebACLMetricName: !GetAtt WebACLStack.Outputs.WAFWebACLMetricName
+              WAFWebACLName: !Select [0, !Split ["|", !GetAtt WebACLStack.Outputs.WAFWebACL ]]
               RegionMetric: !If [AlbEndpoint, !Sub ', "Region", "${AWS::Region}"', '']
               RegionProperties: !If [AlbEndpoint, !Sub '${AWS::Region}', 'us-east-1']
   
