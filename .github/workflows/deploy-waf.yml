@@ -1,0 +1,115 @@
+name: Build & Deploy AWS WAF Automation
+
+on:
+  workflow_dispatch:
+
+env:
+  SOLUTION_NAME: aws-waf-automations
+  VERSION: v1.2.0-custom
+  AWS_REGION: eu-central-1
+  TEMPLATE_OUTPUT_BUCKET: aws-waf-automation-ahgskblenrep
+  DIST_OUTPUT_BUCKET: aws-waf-automation-ahgskblenrep-eu-central-1
+  APP_ACCESS_LOGBUCKET: aws-waf-automation-ahgskblenrep-logs
+  TEMPLATE_FILE: deployment/global-s3-assets/aws-waf-security-automations.template
+
+jobs:
+  build:
+    name: 🧱 Build WAF Solution
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v3
+
+    - name: 🐍 Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: 📦 Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: 🛠 Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y jq zip
+
+    - name: 🔨 Build the solution
+      run: |
+        cd deployment
+        chmod +x ./build-s3-dist.sh
+        ./build-s3-dist.sh $TEMPLATE_OUTPUT_BUCKET $DIST_OUTPUT_BUCKET $SOLUTION_NAME $VERSION
+    
+
+  deploy-account-a:
+    name: 🚀 Deploy to Account A
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    environment: account-a
+
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v3
+
+    - name: 🔐 Assume Role into Account A
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::739133790765:role/GitHubDeployRole
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: ☁️ Upload Global Assets
+      run: |
+        aws s3 cp deployment/global-s3-assets \
+          s3://$TEMPLATE_OUTPUT_BUCKET/$SOLUTION_NAME/$VERSION \
+          --recursive --acl bucket-owner-full-control
+
+    - name: ☁️ Upload Regional Assets
+      run: |
+        aws s3 cp deployment/regional-s3-assets \
+          s3://$DIST_OUTPUT_BUCKET-$AWS_REGION/$SOLUTION_NAME/$VERSION \
+          --recursive --acl bucket-owner-full-control
+
+    - name: ☁️ Install Cfn stack
+      run: |
+        aws cloudformation deploy \
+        --template-file "$TEMPLATE_FILE" \
+        --stack-name waf-security-automations \
+        --capabilities CAPABILITY_NAMED_IAM \
+        --parameter-overrides \
+          ActivateAWSManagedAIPParam=yes \
+          ActivateAWSManagedAPParam=yes \
+          ActivateAWSManagedIPRParam=yes \
+          ActivateAWSManagedKBIParam=yes \
+          ActivateAWSManagedLinuxParam=no \
+          ActivateAWSManagedPHPParam=no \
+          ActivateAWSManagedPOSIXParam=no \
+          ActivateAWSManagedRulesParam=yes \
+          ActivateAWSManagedSQLParam=yes \
+          ActivateAWSManagedWindowsParam=no \
+          ActivateAWSManagedWPParam=no \
+          ActivateBadBotProtectionParam=yes \
+          ActivateCrossSiteScriptingProtectionParam=yes \
+          ActivateHttpFloodProtectionParam="yes - AWS WAF rate based rule" \
+          ActivateReputationListsProtectionParam=yes \
+          ActivateScannersProbesProtectionParam="yes - AWS Lambda log parser" \
+          ActivateSqlInjectionProtectionParam=yes \
+          ApiGatewayBadBotCWRoleParam=- \
+          AppAccessLogBucket=$APP_ACCESS_LOGBUCKET \
+          AppAccessLogBucketLoggingStatusParam=no \
+          AppAccessLogBucketPrefixParam=AWSLogs/ \
+          AthenaQueryRunTimeScheduleParam=5 \
+          EndpointType=ALB \
+          ErrorThreshold=50 \
+          HTTPFloodAthenaQueryGroupByParam=None \
+          IPRetentionPeriodAllowedParam=-1 \
+          IPRetentionPeriodDeniedParam=-1 \
+          KeepDataInOriginalS3Location=No \
+          LogGroupRetentionParam=365 \
+          RequestThreshold=5000 \
+          RequestThresholdByCountryParam=- \
+          SNSEmailParam=- \
+          SqlInjectionProtectionSensitivityLevelParam=LOW \
+          WAFBlockPeriod=240
