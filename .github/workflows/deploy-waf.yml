@@ -8,7 +8,7 @@ env:
   VERSION: v1.2.0-custom
   AWS_REGION: eu-central-1
   TEMPLATE_OUTPUT_BUCKET: aws-waf-automation-ahgskblenrep
-  DIST_OUTPUT_BUCKET: aws-waf-automation-ahgskblenrep-eu-central-1
+  DIST_OUTPUT_BUCKET: aws-waf-automation-ahgskblenrep
   APP_ACCESS_LOGBUCKET: aws-waf-automation-ahgskblenrep-logs
   TEMPLATE_URL: https://aws-waf-automation-ahgskblenrep.s3.eu-central-1.amazonaws.com/aws-waf-automations/v1.2.0-custom/aws-waf-security-automations.template
 
@@ -58,7 +58,7 @@ jobs:
 
     - name: ☁️ Upload Regional Assets
       run: |
-        aws s3 cp ./deployment/regional-s3-assets s3://$DIST_OUTPUT_BUCKET/$SOLUTION_NAME/$VERSION --recursive --acl bucket-owner-full-control
+        aws s3 cp ./deployment/regional-s3-assets s3://$DIST_OUTPUT_BUCKET-$AWS_REGION/$SOLUTION_NAME/$VERSION --recursive --acl bucket-owner-full-control
 
     - name: ☁️ Create or Update CloudFormation Stack
       run: |
