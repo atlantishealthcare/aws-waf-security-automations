@@ -1,10 +1,3 @@
-Great! Below is an updated version of the `README.md` that includes **ASCII diagrams** to illustrate the **S3 bucket structure** and **CloudFormation stack relationship**. These diagrams are lightweight, GitHub-friendly, and help visualize how assets are built and deployed.
-
----
-
-### 📄 `README.md` (with diagrams)
-
-````markdown
 # 🚀 AWS WAF Automation Deployment via GitHub Actions
 
 This GitHub Actions workflow builds and deploys the [AWS WAF Security Automations](https://docs.aws.amazon.com/solutions/latest/aws-waf-security-automations/solution-overview.html) into a target AWS account using OpenID Connect (OIDC) authentication.
