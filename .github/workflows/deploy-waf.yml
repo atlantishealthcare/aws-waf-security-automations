@@ -14,7 +14,7 @@ env:
 
 jobs:
   build:
-    name: 🧱 Build WAF Solution
+    name: 🧱 Build and deploy WAF Solution
     runs-on: ubuntu-latest
 
     steps:
@@ -29,10 +29,8 @@ jobs:
     - name: 📦 Install Poetry
       run: |
         curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.7.0 python3 -
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-        
-        
-
+        echo "$HOME/.local/bin" >> $GITHUB_PATH  
+  
     - name: 🛠 Install dependencies
       run: sudo apt-get update && sudo apt-get install -y jq zip
 
@@ -41,20 +39,6 @@ jobs:
         cd deployment
         chmod +x ./build-s3-dist.sh
         ./build-s3-dist.sh $TEMPLATE_OUTPUT_BUCKET $DIST_OUTPUT_BUCKET $SOLUTION_NAME $VERSION
-    
-
-  deploy-account:
-    name: 🚀 Deploy to Account
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-  
-    steps:
-    - name: 📥 Checkout
-      uses: actions/checkout@v3
-
     - name: 🔐 Assume Role into Account
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -113,4 +97,4 @@ jobs:
           RequestThresholdByCountryParam=- \
           SNSEmailParam=- \
           SqlInjectionProtectionSensitivityLevelParam=LOW \
-          WAFBlockPeriod=240
+          WAFBlockPeriod=240    
