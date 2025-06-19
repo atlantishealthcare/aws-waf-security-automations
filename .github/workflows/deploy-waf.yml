@@ -98,7 +98,7 @@ jobs:
           ParameterKey=KeepDataInOriginalS3Location,ParameterValue=No \
           ParameterKey=LogGroupRetentionParam,ParameterValue=365 \
           ParameterKey=RequestThreshold,ParameterValue=5000 \
-          ParameterKey=RequestThresholdByCountryParam,ParameterValue=- \
+          ParameterKey=RequestThresholdByCountryParam,ParameterValue= \
           ParameterKey=SNSEmailParam,ParameterValue=- \
           ParameterKey=SqlInjectionProtectionSensitivityLevelParam,ParameterValue=LOW \
           ParameterKey=WAFBlockPeriod,ParameterValue=240"
