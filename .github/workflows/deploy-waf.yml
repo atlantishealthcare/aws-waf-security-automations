@@ -85,7 +85,7 @@ jobs:
           ParameterKey=ActivateReputationListsProtectionParam,ParameterValue=yes \
           ParameterKey=ActivateScannersProbesProtectionParam,ParameterValue=no \
           ParameterKey=ActivateSqlInjectionProtectionParam,ParameterValue=yes \
-          ParameterKey=ApiGatewayBadBotCWRoleParam,ParameterValue=- \
+          ParameterKey=ApiGatewayBadBotCWRoleParam,ParameterValue= \
           ParameterKey=AppAccessLogBucket,ParameterValue=${APP_ACCESS_LOGBUCKET} \
           ParameterKey=AppAccessLogBucketLoggingStatusParam,ParameterValue=no \
           ParameterKey=AppAccessLogBucketPrefixParam,ParameterValue=AWSLogs/ \
@@ -97,9 +97,9 @@ jobs:
           ParameterKey=IPRetentionPeriodDeniedParam,ParameterValue=-1 \
           ParameterKey=KeepDataInOriginalS3Location,ParameterValue=No \
           ParameterKey=LogGroupRetentionParam,ParameterValue=365 \
-          ParameterKey=RequestThreshold,ParameterValue=5000 \
+          ParameterKey=RequestThreshold,ParameterValue=100 \
           ParameterKey=RequestThresholdByCountryParam,ParameterValue= \
-          ParameterKey=SNSEmailParam,ParameterValue=- \
+          ParameterKey=SNSEmailParam,ParameterValue= \
           ParameterKey=SqlInjectionProtectionSensitivityLevelParam,ParameterValue=LOW \
           ParameterKey=WAFBlockPeriod,ParameterValue=240"
 
