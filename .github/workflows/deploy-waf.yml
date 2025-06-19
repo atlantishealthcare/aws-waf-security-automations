@@ -60,10 +60,12 @@ jobs:
       with:
         role-to-assume: arn:aws:iam::739133790765:role/GitHubDeployRole
         aws-region: ${{ env.AWS_REGION }}
-
-    - name: ☁️ Upload Global Assets
+    
+    - name: Move one level up
       run: |
         cd ..
+
+    - name: ☁️ Upload Global Assets
       run: |
         aws s3 cp deployment/global-s3-assets \
           s3://$TEMPLATE_OUTPUT_BUCKET/$SOLUTION_NAME/$VERSION \
