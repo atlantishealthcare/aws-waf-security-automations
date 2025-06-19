@@ -43,26 +43,27 @@ jobs:
         ./build-s3-dist.sh $TEMPLATE_OUTPUT_BUCKET $DIST_OUTPUT_BUCKET $SOLUTION_NAME $VERSION
     
 
-  deploy-account-a:
-    name: 🚀 Deploy to Account A
+  deploy-account:
+    name: 🚀 Deploy to Account
     needs: build
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
-    
-
+  
     steps:
     - name: 📥 Checkout
       uses: actions/checkout@v3
 
-    - name: 🔐 Assume Role into Account A
+    - name: 🔐 Assume Role into Account
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: arn:aws:iam::739133790765:role/GitHubDeployRole
         aws-region: ${{ env.AWS_REGION }}
 
     - name: ☁️ Upload Global Assets
+      run: |
+        cd ..
       run: |
         aws s3 cp deployment/global-s3-assets \
           s3://$TEMPLATE_OUTPUT_BUCKET/$SOLUTION_NAME/$VERSION \
