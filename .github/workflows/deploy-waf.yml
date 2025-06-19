@@ -39,6 +39,7 @@ jobs:
         cd deployment
         chmod +x ./build-s3-dist.sh
         ./build-s3-dist.sh $TEMPLATE_OUTPUT_BUCKET $DIST_OUTPUT_BUCKET $SOLUTION_NAME $VERSION
+        
     - name: 🔐 Assume Role into Account
       uses: aws-actions/configure-aws-credentials@v4
       with:
