@@ -1,6 +1,9 @@
 [tool.poetry]
 name = "log_parser"
-package-mode = false
+version = "0.1.0"
+description = "Log parser Lambda function"
+authors = ["Anwar <anwarsadat.shahulhameed@atlantishealth.com>"]
+
 
 [tool.poetry.dependencies]
 python = "~3.12"
