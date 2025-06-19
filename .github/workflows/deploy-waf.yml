@@ -64,46 +64,44 @@ jobs:
       run: |
         set -e
 
-        PARAMS=$(cat <<-END
-          ParameterKey=ActivateAWSManagedAIPParam,ParameterValue=yes
-          ParameterKey=ActivateAWSManagedAPParam,ParameterValue=yes
-          ParameterKey=ActivateAWSManagedIPRParam,ParameterValue=yes
-          ParameterKey=ActivateAWSManagedKBIParam,ParameterValue=yes
-          ParameterKey=ActivateAWSManagedLinuxParam,ParameterValue=no
-          ParameterKey=ActivateAWSManagedPHPParam,ParameterValue=no
-          ParameterKey=ActivateAWSManagedPOSIXParam,ParameterValue=no
-          ParameterKey=ActivateAWSManagedRulesParam,ParameterValue=yes
-          ParameterKey=ActivateAWSManagedSQLParam,ParameterValue=yes
-          ParameterKey=ActivateAWSManagedWindowsParam,ParameterValue=no
-          ParameterKey=ActivateAWSManagedWPParam,ParameterValue=no
-          ParameterKey=ActivateBadBotProtectionParam,ParameterValue=yes
-          ParameterKey=ActivateCrossSiteScriptingProtectionParam,ParameterValue=yes
-          ParameterKey=ActivateHttpFloodProtectionParam,ParameterValue="yes - AWS WAF rate based rule"
-          ParameterKey=ActivateReputationListsProtectionParam,ParameterValue=yes
-          ParameterKey=ActivateScannersProbesProtectionParam,ParameterValue="yes - AWS Lambda log parser"
-          ParameterKey=ActivateSqlInjectionProtectionParam,ParameterValue=yes
-          ParameterKey=ApiGatewayBadBotCWRoleParam,ParameterValue=-
-          ParameterKey=AppAccessLogBucket,ParameterValue=${APP_ACCESS_LOGBUCKET}
-          ParameterKey=AppAccessLogBucketLoggingStatusParam,ParameterValue=no
-          ParameterKey=AppAccessLogBucketPrefixParam,ParameterValue=AWSLogs/
-          ParameterKey=AthenaQueryRunTimeScheduleParam,ParameterValue=5
-          ParameterKey=EndpointType,ParameterValue=ALB
-          ParameterKey=ErrorThreshold,ParameterValue=50
-          ParameterKey=HTTPFloodAthenaQueryGroupByParam,ParameterValue=None
-          ParameterKey=IPRetentionPeriodAllowedParam,ParameterValue=-1
-          ParameterKey=IPRetentionPeriodDeniedParam,ParameterValue=-1
-          ParameterKey=KeepDataInOriginalS3Location,ParameterValue=No
-          ParameterKey=LogGroupRetentionParam,ParameterValue=365
-          ParameterKey=RequestThreshold,ParameterValue=5000
-          ParameterKey=RequestThresholdByCountryParam,ParameterValue=-
-          ParameterKey=SNSEmailParam,ParameterValue=-
-          ParameterKey=SqlInjectionProtectionSensitivityLevelParam,ParameterValue=LOW
-          ParameterKey=WAFBlockPeriod,ParameterValue=240
-        END
-        )
-
         STACK_NAME="waf-security-automations"
         TEMPLATE_URL="${{ env.TEMPLATE_URL }}"
+
+        PARAMS="\
+          ParameterKey=ActivateAWSManagedAIPParam,ParameterValue=yes \
+          ParameterKey=ActivateAWSManagedAPParam,ParameterValue=yes \
+          ParameterKey=ActivateAWSManagedIPRParam,ParameterValue=yes \
+          ParameterKey=ActivateAWSManagedKBIParam,ParameterValue=yes \
+          ParameterKey=ActivateAWSManagedLinuxParam,ParameterValue=no \
+          ParameterKey=ActivateAWSManagedPHPParam,ParameterValue=no \
+          ParameterKey=ActivateAWSManagedPOSIXParam,ParameterValue=no \
+          ParameterKey=ActivateAWSManagedRulesParam,ParameterValue=yes \
+          ParameterKey=ActivateAWSManagedSQLParam,ParameterValue=yes \
+          ParameterKey=ActivateAWSManagedWindowsParam,ParameterValue=no \
+          ParameterKey=ActivateAWSManagedWPParam,ParameterValue=no \
+          ParameterKey=ActivateBadBotProtectionParam,ParameterValue=yes \
+          ParameterKey=ActivateCrossSiteScriptingProtectionParam,ParameterValue=yes \
+          ParameterKey=ActivateHttpFloodProtectionParam,ParameterValue='yes - AWS WAF rate based rule' \
+          ParameterKey=ActivateReputationListsProtectionParam,ParameterValue=yes \
+          ParameterKey=ActivateScannersProbesProtectionParam,ParameterValue='yes - AWS Lambda log parser' \
+          ParameterKey=ActivateSqlInjectionProtectionParam,ParameterValue=yes \
+          ParameterKey=ApiGatewayBadBotCWRoleParam,ParameterValue=- \
+          ParameterKey=AppAccessLogBucket,ParameterValue=${APP_ACCESS_LOGBUCKET} \
+          ParameterKey=AppAccessLogBucketLoggingStatusParam,ParameterValue=no \
+          ParameterKey=AppAccessLogBucketPrefixParam,ParameterValue=AWSLogs/ \
+          ParameterKey=AthenaQueryRunTimeScheduleParam,ParameterValue=5 \
+          ParameterKey=EndpointType,ParameterValue=ALB \
+          ParameterKey=ErrorThreshold,ParameterValue=50 \
+          ParameterKey=HTTPFloodAthenaQueryGroupByParam,ParameterValue=None \
+          ParameterKey=IPRetentionPeriodAllowedParam,ParameterValue=-1 \
+          ParameterKey=IPRetentionPeriodDeniedParam,ParameterValue=-1 \
+          ParameterKey=KeepDataInOriginalS3Location,ParameterValue=No \
+          ParameterKey=LogGroupRetentionParam,ParameterValue=365 \
+          ParameterKey=RequestThreshold,ParameterValue=5000 \
+          ParameterKey=RequestThresholdByCountryParam,ParameterValue=- \
+          ParameterKey=SNSEmailParam,ParameterValue=- \
+          ParameterKey=SqlInjectionProtectionSensitivityLevelParam,ParameterValue=LOW \
+          ParameterKey=WAFBlockPeriod,ParameterValue=240"
 
         if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
           echo "🆙 Stack exists, updating..."
@@ -120,3 +118,4 @@ jobs:
             --capabilities CAPABILITY_NAMED_IAM \
             --parameters $PARAMS
         fi
+
