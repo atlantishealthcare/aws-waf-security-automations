@@ -81,9 +81,9 @@ jobs:
           ParameterKey=ActivateAWSManagedWPParam,ParameterValue=no \
           ParameterKey=ActivateBadBotProtectionParam,ParameterValue=yes \
           ParameterKey=ActivateCrossSiteScriptingProtectionParam,ParameterValue=yes \
-          ParameterKey=ActivateHttpFloodProtectionParam,ParameterValue='yes - AWS WAF rate based rule' \
+          ParameterKey=ActivateHttpFloodProtectionParam,ParameterValue="'yes - AWS WAF rate based rule'" \
           ParameterKey=ActivateReputationListsProtectionParam,ParameterValue=yes \
-          ParameterKey=ActivateScannersProbesProtectionParam,ParameterValue='yes - AWS Lambda log parser' \
+          ParameterKey=ActivateScannersProbesProtectionParam,ParameterValue="'yes - AWS Lambda log parser'" \
           ParameterKey=ActivateSqlInjectionProtectionParam,ParameterValue=yes \
           ParameterKey=ApiGatewayBadBotCWRoleParam,ParameterValue=- \
           ParameterKey=AppAccessLogBucket,ParameterValue=${APP_ACCESS_LOGBUCKET} \
