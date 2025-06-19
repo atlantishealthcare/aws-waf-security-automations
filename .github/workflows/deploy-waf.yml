@@ -28,7 +28,7 @@ jobs:
 
     - name: 📦 Install Poetry
       run: |
-        curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.7.0 python3 -
+        curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.2.0 python3 -
         echo "$HOME/.local/bin" >> $GITHUB_PATH
         
         
