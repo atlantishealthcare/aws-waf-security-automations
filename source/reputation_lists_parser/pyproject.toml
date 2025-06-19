@@ -1,6 +1,8 @@
 [tool.poetry]
 name = "reputation_lists_parser"
-package-mode = false
+version = "0.1.0"
+description = "Reputation List Parser"
+authors = ["Anwar <anwarsadat.shahulhameed@atlantishealth.com>"]
 
 [tool.poetry.dependencies]
 python = "~3.12"

@@ -1,5 +1,7 @@
 [tool.poetry]
-package-mode = false
+version = "0.1.0"
+description = "Helper"
+authors = ["Anwar <anwarsadat.shahulhameed@atlantishealth.com>"]
 name = "helper"
 
 [tool.poetry.dependencies]

@@ -1,5 +1,7 @@
 [tool.poetry]
-package-mode = false
+version = "0.1.0"
+description = "Custom resrources"
+authors = ["Anwar <anwarsadat.shahulhameed@atlantishealth.com>"]
 name = "custom-resource"
 
 [tool.poetry.dependencies]

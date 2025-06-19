@@ -1,6 +1,8 @@
 [tool.poetry]
 name = "access-handler"
-package-mode = false
+version = "0.1.0"
+description = "Access Handler"
+authors = ["Anwar <anwarsadat.shahulhameed@atlantishealth.com>"]
 
 [tool.poetry.dependencies]
 python = "~3.12"

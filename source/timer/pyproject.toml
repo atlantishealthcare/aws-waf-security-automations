@@ -1,6 +1,8 @@
 [tool.poetry]
 name = "timer"
-package-mode = false
+version = "0.1.0"
+description = "Timer"
+authors = ["Anwar <anwarsadat.shahulhameed@atlantishealth.com>"]
 
 [tool.poetry.dependencies]
 python = "~3.12"

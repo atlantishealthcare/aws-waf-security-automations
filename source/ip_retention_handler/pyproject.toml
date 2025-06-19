@@ -1,6 +1,8 @@
 [tool.poetry]
 name = "ip_retention_handler"
-package-mode = false
+version = "0.1.0"
+description = "IP retention handler"
+authors = ["Anwar <anwarsadat.shahulhameed@atlantishealth.com>"]
 
 [tool.poetry.dependencies]
 python = "~3.12"
