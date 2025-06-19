@@ -2,15 +2,25 @@ name: Build & Deploy AWS WAF Automation
 
 on:
   workflow_dispatch:
+    inputs:
+      aws_region:
+        description: 'AWS Region'
+        required: true
+        default: 'eu-central-1'
+      account_id:
+        description: 'Target AWS Account ID'
+        required: true
+      bucket_prefix:
+        description: 'S3 Bucket prefix (e.g. aws-waf-automation)'
+        required: true
+        default: 'aws-waf-automation'
+      program_name:
+        description: 'Program name (used as suffix in bucket names)'
+        required: true
 
 env:
   SOLUTION_NAME: aws-waf-automations
   VERSION: v1.2.0-custom
-  AWS_REGION: eu-central-1
-  TEMPLATE_OUTPUT_BUCKET: aws-waf-automation-ahgskblenrep
-  DIST_OUTPUT_BUCKET: aws-waf-automation-ahgskblenrep
-  APP_ACCESS_LOGBUCKET: aws-waf-automation-ahgskblenrep-logs
-  TEMPLATE_URL: https://aws-waf-automation-ahgskblenrep.s3.eu-central-1.amazonaws.com/aws-waf-automations/v1.2.0-custom/aws-waf-security-automations.template
 
 jobs:
   build:
@@ -21,6 +31,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: 🔐 Assume Role into Target Account
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ github.event.inputs.account_id }}:role/GitHubDeployRole
+        aws-region: ${{ github.event.inputs.aws_region }}
+
+    - name: 🪣 Create S3 Buckets and Export Env Vars
+      id: setup-buckets
+      run: |
+        set -e
+
+        REGION="${{ github.event.inputs.aws_region }}"
+        PREFIX="${{ github.event.inputs.bucket_prefix }}"
+        SUFFIX="${{ github.event.inputs.program_name }}"
+
+        TEMPLATE_BUCKET="${PREFIX}-${SUFFIX}"
+        DIST_BUCKET="${PREFIX}-${SUFFIX}-${REGION}"
+        LOG_BUCKET="${PREFIX}-${SUFFIX}-logs"
+
+        for BUCKET in "$TEMPLATE_BUCKET" "$DIST_BUCKET" "$LOG_BUCKET"; do
+          if ! aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
+            echo "Creating $BUCKET..."
+            aws s3api create-bucket --bucket "$BUCKET" --region "$REGION" \
+              --create-bucket-configuration LocationConstraint="$REGION"
+          fi
+        done
+
+        echo "TEMPLATE_OUTPUT_BUCKET=$TEMPLATE_BUCKET" >> $GITHUB_ENV
+        echo "DIST_OUTPUT_BUCKET=$DIST_BUCKET" >> $GITHUB_ENV
+        echo "APP_ACCESS_LOGBUCKET=$LOG_BUCKET" >> $GITHUB_ENV
+        echo "AWS_REGION=$REGION" >> $GITHUB_ENV
+
+        echo "TEMPLATE_URL=https://${TEMPLATE_BUCKET}.s3.${REGION}.amazonaws.com/${{ env.SOLUTION_NAME }}/${{ env.VERSION }}/aws-waf-security-automations.template" >> $GITHUB_ENV
+
     - name: 📥 Checkout
       uses: actions/checkout@v3
 
@@ -41,31 +85,20 @@ jobs:
       run: |
         cd deployment
         chmod +x ./build-s3-dist.sh
-        ./build-s3-dist.sh $TEMPLATE_OUTPUT_BUCKET $DIST_OUTPUT_BUCKET $SOLUTION_NAME $VERSION
-
-    - name: 🔐 Assume Role into Account
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: arn:aws:iam::739133790765:role/GitHubDeployRole
-        aws-region: ${{ env.AWS_REGION }}
-    
-    - name: Move one level up
-      run: cd ..
+        ./build-s3-dist.sh "${{ env.TEMPLATE_OUTPUT_BUCKET }}" "${{ env.TEMPLATE_OUTPUT_BUCKET }}" "${{ env.SOLUTION_NAME }}" "${{ env.VERSION }}"
 
     - name: ☁️ Upload Global Assets
       run: |
-        aws s3 cp ./deployment/global-s3-assets s3://$TEMPLATE_OUTPUT_BUCKET/$SOLUTION_NAME/$VERSION --recursive --acl bucket-owner-full-control
+        aws s3 cp ./global-s3-assets "s3://${{ env.TEMPLATE_OUTPUT_BUCKET }}/${{ env.SOLUTION_NAME }}/${{ env.VERSION }}" --recursive --acl bucket-owner-full-control
 
     - name: ☁️ Upload Regional Assets
       run: |
-        aws s3 cp ./deployment/regional-s3-assets s3://$DIST_OUTPUT_BUCKET-$AWS_REGION/$SOLUTION_NAME/$VERSION --recursive --acl bucket-owner-full-control
+        aws s3 cp ./regional-s3-assets "s3://${{ env.DIST_OUTPUT_BUCKET }}/${{ env.SOLUTION_NAME }}/${{ env.VERSION }}" --recursive --acl bucket-owner-full-control
 
     - name: ☁️ Create or Update CloudFormation Stack
       run: |
         set -e
-
         STACK_NAME="waf-security-automations"
-        TEMPLATE_URL="${{ env.TEMPLATE_URL }}"
 
         PARAMS="\
           ParameterKey=ActivateAWSManagedAIPParam,ParameterValue=yes \
@@ -86,7 +119,7 @@ jobs:
           ParameterKey=ActivateScannersProbesProtectionParam,ParameterValue=no \
           ParameterKey=ActivateSqlInjectionProtectionParam,ParameterValue=yes \
           ParameterKey=ApiGatewayBadBotCWRoleParam,ParameterValue= \
-          ParameterKey=AppAccessLogBucket,ParameterValue=${APP_ACCESS_LOGBUCKET} \
+          ParameterKey=AppAccessLogBucket,ParameterValue=${{ env.APP_ACCESS_LOGBUCKET }} \
           ParameterKey=AppAccessLogBucketLoggingStatusParam,ParameterValue=no \
           ParameterKey=AppAccessLogBucketPrefixParam,ParameterValue=AWSLogs/ \
           ParameterKey=AthenaQueryRunTimeScheduleParam,ParameterValue=5 \
@@ -107,15 +140,14 @@ jobs:
           echo "🆙 Stack exists, updating..."
           aws cloudformation update-stack \
             --stack-name "$STACK_NAME" \
-            --template-url "$TEMPLATE_URL" \
+            --template-url "${{ env.TEMPLATE_URL }}" \
             --capabilities CAPABILITY_NAMED_IAM \
             --parameters $PARAMS
         else
           echo "🆕 Stack does not exist, creating..."
           aws cloudformation create-stack \
             --stack-name "$STACK_NAME" \
-            --template-url "$TEMPLATE_URL" \
+            --template-url "${{ env.TEMPLATE_URL }}" \
             --capabilities CAPABILITY_NAMED_IAM \
             --parameters $PARAMS
         fi
-
