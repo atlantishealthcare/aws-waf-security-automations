@@ -64,7 +64,7 @@ jobs:
     - name: ☁️ Install Cfn stack
       run: |
         aws cloudformation deploy \
-       --template-url "https://$TEMPLATE_OUTPUT_BUCKET/$SOLUTION_NAME/$VERSION/aws-waf-security-automations.template" \
+        --template-url "https://$TEMPLATE_OUTPUT_BUCKET/$SOLUTION_NAME/$VERSION/aws-waf-security-automations.template" \
         --stack-name waf-security-automations \
         --capabilities CAPABILITY_NAMED_IAM \
         --parameter-overrides \
